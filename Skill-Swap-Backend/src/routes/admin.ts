@@ -109,6 +109,60 @@ adminRouter.post("/login", async (req: Request, res: Response) => {
   }
 });
 
+adminRouter.get("/users", verifyAdmin, async (req: Request, res: Response) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: { isAdmin: false },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isAdmin: true,
+      },
+    });
 
+    res.json({ users });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+  
+
+adminRouter.patch("/user/:id/status", verifyAdmin, async (req: Request, res: Response) => {
+  const userId = Number(req.params.id);
+  const { isActive } = req.body;
+
+  try {
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { isActive },
+    });
+
+    res.json({ message: "User status updated", updated });
+  } catch (error) {
+    console.error("Update status error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
+adminRouter.get("/user-reports", verifyAdmin, async (req, res) => {
+  try {
+    const reports = await prisma.userReport.findMany({
+      include: {
+        reporter: { select: { id: true, name: true, email: true } },
+        reportedUser: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    res.json({ reports });
+  } catch (error) {
+    console.error("Fetch reports error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 export default adminRouter;

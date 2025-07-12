@@ -302,4 +302,29 @@ userRouter.patch("/request/:id", verifyUser, async (req, res) => {
 });
 
 
+
+userRouter.post("/report", verifyUser, async (req, res) => {
+  const { reportedUserId, reason } = req.body;
+  const reporterId = req.user!.userId;
+
+  if (!reportedUserId || !reason) {
+    return res.status(400).json({ message: "Invalid input" });
+  }
+
+  try {
+    const report = await prisma.userReport.create({
+      data: {
+        reporterId,
+        reportedUserId,
+        reason,
+      },
+    });
+
+    res.status(201).json({ message: "Report submitted", report });
+  } catch (err) {
+    console.error("Report error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 export default userRouter;

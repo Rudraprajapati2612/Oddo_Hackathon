@@ -20,38 +20,51 @@ model User {
   email    String   @unique
   password String
   isAdmin  Boolean  @default(false)
-
+  isActive Boolean  @default(true)
   // Inverse relation
   profile  Profile?
 
-   sentRequests     SwapRequest[] @relation("FromUser")
+  sentRequests     SwapRequest[] @relation("FromUser")
   receivedRequests SwapRequest[] @relation("ToUser")
+
+  reportedUsers  UserReport[] @relation("Reporter") // Users this user has reported
+  reportsAgainst UserReport[] @relation("Reported") // Reports against this user
 }
 
 model Profile {
-  id        Int      @id @default(autoincrement())
-  bio       String?
-  skills    String[]
-  location  String?
-  userId    Int      @unique
-  user      User     @relation(fields: [userId], references: [id])
+  id       Int      @id @default(autoincrement())
+  bio      String?
+  skills   String[]
+  location String?
+  userId   Int      @unique
+  user     User     @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-
 model SwapRequest {
-  id            Int      @id @default(autoincrement())
-  fromUserId    Int
-  toUserId      Int
-  skillNeeded   String
-  skillOffered  String
-  schedule      String?
-  status        String   @default("pending") // pending, accepted, declined
+  id           Int     @id @default(autoincrement())
+  fromUserId   Int
+  toUserId     Int
+  skillNeeded  String
+  skillOffered String
+  schedule     String?
+  status       String  @default("pending") // pending, accepted, declined
 
-  fromUser      User     @relation("FromUser", fields: [fromUserId], references: [id])
-  toUser        User     @relation("ToUser", fields: [toUserId], references: [id])
+  fromUser User @relation("FromUser", fields: [fromUserId], references: [id])
+  toUser   User @relation("ToUser", fields: [toUserId], references: [id])
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
+}
+
+model UserReport {
+  id             Int      @id @default(autoincrement())
+  reporterId     Int
+  reportedUserId Int
+  reason         String
+  createdAt      DateTime @default(now())
+
+  reporter     User @relation("Reporter", fields: [reporterId], references: [id])
+  reportedUser User @relation("Reported", fields: [reportedUserId], references: [id])
 }

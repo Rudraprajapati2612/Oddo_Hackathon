@@ -17,6 +17,7 @@ const zod_1 = require("zod");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const client_1 = require("@prisma/client");
+const auth_1 = require("../middleware/auth");
 const adminRouter = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
 // --------------------- Zod Schemas ---------------------
@@ -95,6 +96,55 @@ adminRouter.post("/login", (req, res) => __awaiter(void 0, void 0, void 0, funct
     catch (error) {
         console.error("Login error:", error);
         return res.status(500).json({ error: "Internal server error" });
+    }
+}));
+adminRouter.get("/users", auth_1.verifyAdmin, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const users = yield prisma.user.findMany({
+            where: { isAdmin: false },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                isAdmin: true,
+            },
+        });
+        res.json({ users });
+    }
+    catch (error) {
+        console.error("Error fetching users:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+}));
+adminRouter.patch("/user/:id/status", auth_1.verifyAdmin, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = Number(req.params.id);
+    const { isActive } = req.body;
+    try {
+        const updated = yield prisma.user.update({
+            where: { id: userId },
+            data: { isActive },
+        });
+        res.json({ message: "User status updated", updated });
+    }
+    catch (error) {
+        console.error("Update status error:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+}));
+adminRouter.get("/user-reports", auth_1.verifyAdmin, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const reports = yield prisma.userReport.findMany({
+            include: {
+                reporter: { select: { id: true, name: true, email: true } },
+                reportedUser: { select: { id: true, name: true, email: true } },
+            },
+            orderBy: { createdAt: "desc" }
+        });
+        res.json({ reports });
+    }
+    catch (error) {
+        console.error("Fetch reports error:", error);
+        res.status(500).json({ message: "Server error" });
     }
 }));
 exports.default = adminRouter;

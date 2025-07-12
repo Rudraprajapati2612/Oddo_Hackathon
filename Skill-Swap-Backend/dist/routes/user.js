@@ -257,4 +257,25 @@ userRouter.patch("/request/:id", auth_1.verifyUser, (req, res) => __awaiter(void
         res.status(500).json({ message: "Server error" });
     }
 }));
+userRouter.post("/report", auth_1.verifyUser, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { reportedUserId, reason } = req.body;
+    const reporterId = req.user.userId;
+    if (!reportedUserId || !reason) {
+        return res.status(400).json({ message: "Invalid input" });
+    }
+    try {
+        const report = yield prisma.userReport.create({
+            data: {
+                reporterId,
+                reportedUserId,
+                reason,
+            },
+        });
+        res.status(201).json({ message: "Report submitted", report });
+    }
+    catch (err) {
+        console.error("Report error:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+}));
 exports.default = userRouter;
