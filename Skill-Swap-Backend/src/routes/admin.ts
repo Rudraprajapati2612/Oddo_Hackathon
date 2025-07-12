@@ -165,4 +165,57 @@ adminRouter.get("/user-reports", verifyAdmin, async (req, res) => {
   }
 });
 
+adminRouter.get("/swap-requests", verifyAdmin, async (req, res) => {
+  try {
+    const requests = await prisma.swapRequest.findMany({
+      include: {
+        fromUser: { select: { id: true, name: true, email: true } },
+        toUser: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    res.json({ requests });
+  } catch (error) {
+    console.error("Fetch swap requests error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+adminRouter.get("/analytics", verifyAdmin, async (req, res) => {
+  try {
+    const totalUsers = await prisma.user.count({ where: { isAdmin: false } });
+    const activeUsers = await prisma.user.count({ where: { isActive: true, isAdmin: false } });
+    const totalRequests = await prisma.swapRequest.count();
+
+    const topSkills = await prisma.skill.findMany({
+      orderBy: {
+        users: {
+          _count: "desc",
+        },
+      },
+      take: 5,
+      select: {
+        name: true,
+        _count: {
+          select: { users: true },
+        },
+      },
+    });
+    
+
+    res.json({
+      totalUsers,
+      activeUsers,
+      totalRequests,
+      topSkills,
+    });
+  } catch (error) {
+    console.error("Analytics error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 export default adminRouter;

@@ -21,27 +21,33 @@ model User {
   password String
   isAdmin  Boolean  @default(false)
   isActive Boolean  @default(true)
-  // Inverse relation
   profile  Profile?
 
   sentRequests     SwapRequest[] @relation("FromUser")
   receivedRequests SwapRequest[] @relation("ToUser")
 
-  reportedUsers  UserReport[] @relation("Reporter") // Users this user has reported
-  reportsAgainst UserReport[] @relation("Reported") // Reports against this user
+  reportedUsers  UserReport[] @relation("Reporter")
+  reportsAgainst UserReport[] @relation("Reported")
 }
 
 model Profile {
-  id       Int      @id @default(autoincrement())
-  bio      String?
-  skills   String[]
-  location String?
-  userId   Int      @unique
-  user     User     @relation(fields: [userId], references: [id])
-
+  id        Int      @id @default(autoincrement())
+  bio       String?
+  location  String?
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+  skills    Skill[]  @relation("ProfileSkills")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Skill {
+  id     Int      @id @default(autoincrement())
+  name   String   @unique
+  users  Profile[] @relation("ProfileSkills")
+}
+
+
 
 model SwapRequest {
   id           Int     @id @default(autoincrement())
@@ -50,7 +56,7 @@ model SwapRequest {
   skillNeeded  String
   skillOffered String
   schedule     String?
-  status       String  @default("pending") // pending, accepted, declined
+  status       String  @default("pending")
 
   fromUser User @relation("FromUser", fields: [fromUserId], references: [id])
   toUser   User @relation("ToUser", fields: [toUserId], references: [id])

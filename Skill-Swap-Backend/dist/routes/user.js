@@ -108,7 +108,6 @@ userRouter.post("/profile", auth_1.verifyUser, (req, res) => __awaiter(void 0, v
     if (!result.success) {
         return res.status(400).json({
             message: "Validation failed",
-            // errors: result.error.errors,
         });
     }
     const { bio, skills, location } = result.data;
@@ -121,10 +120,18 @@ userRouter.post("/profile", auth_1.verifyUser, (req, res) => __awaiter(void 0, v
         const profile = yield prisma.profile.create({
             data: {
                 bio,
-                skills,
                 location,
                 userId,
+                skills: {
+                    connectOrCreate: skills.map(skill => ({
+                        where: { name: skill },
+                        create: { name: skill }
+                    }))
+                }
             },
+            include: {
+                skills: true, // Optional: include skills in response
+            }
         });
         res.status(201).json({ message: "Profile created", profile });
     }

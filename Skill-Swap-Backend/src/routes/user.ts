@@ -121,7 +121,6 @@ userRouter.post("/profile", verifyUser, async (req, res) => {
   if (!result.success) {
     return res.status(400).json({
       message: "Validation failed",
-      // errors: result.error.errors,
     });
   }
 
@@ -130,7 +129,6 @@ userRouter.post("/profile", verifyUser, async (req, res) => {
 
   try {
     const existing = await prisma.profile.findUnique({ where: { userId } });
-
     if (existing) {
       return res.status(409).json({ message: "Profile already exists" });
     }
@@ -138,10 +136,18 @@ userRouter.post("/profile", verifyUser, async (req, res) => {
     const profile = await prisma.profile.create({
       data: {
         bio,
-        skills,
         location,
         userId,
+        skills: {
+          connectOrCreate: skills.map(skill => ({
+            where: { name: skill },
+            create: { name: skill }
+          }))
+        }
       },
+      include: {
+        skills: true, // Optional: include skills in response
+      }
     });
 
     res.status(201).json({ message: "Profile created", profile });
@@ -150,6 +156,7 @@ userRouter.post("/profile", verifyUser, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 userRouter.get("/profile/me", verifyUser, async (req, res) => {
   const userId = req.user!.userId;
