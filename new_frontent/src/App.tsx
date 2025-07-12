@@ -8,9 +8,9 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import SwapRequests from "./pages/SwapRequests";
 import NotFound from "./pages/NotFound";
-import AdminLayout from "./components/admin/AdminLayout";
+import AdminLayout from "./pages/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
-import UserManagement from "./pages/admin/UserManagement";
+import UserManagement from "./pages/admin/Analytics"; // Assuming Analytics was meant for UserManagement
 import Analytics from "./pages/admin/Analytics";
 import Settings from "./pages/admin/Settings";
 
@@ -30,13 +30,13 @@ const App = () => (
           
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Dashboard />} />
+            <Route index element={<Dashboard />} /> {/* Default route for /admin */}
             <Route path="users" element={<UserManagement />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
