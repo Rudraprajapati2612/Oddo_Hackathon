@@ -20,6 +20,7 @@ const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const userRouter = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
+const notification_1 = require("../ws/notification");
 // --------------------- Zod Schemas ---------------------
 const signupSchema = zod_1.z.object({
     name: zod_1.z.string().min(1, "Name is required"),
@@ -186,6 +187,11 @@ userRouter.post("/request", auth_1.verifyUser, (req, res) => __awaiter(void 0, v
                 schedule,
             },
         });
+        yield (0, notification_1.notifyUser)({
+            userId: toUserId,
+            message: `You have a new swap request from ${req.user.userId}`,
+            type: "swap-request"
+        });
         res.status(201).json({ message: "Swap request sent", request });
     }
     catch (err) {
@@ -256,6 +262,11 @@ userRouter.patch("/request/:id", auth_1.verifyUser, (req, res) => __awaiter(void
         const updatedRequest = yield prisma.swapRequest.update({
             where: { id: requestId },
             data: { status },
+        });
+        yield (0, notification_1.notifyUser)({
+            userId: request.fromUserId,
+            message: `Your swap request has been ${status} by user ${userId}`,
+            type: "swap-response"
         });
         res.status(200).json({ message: `Request ${status}`, updatedRequest });
     }
