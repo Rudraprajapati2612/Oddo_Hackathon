@@ -216,4 +216,90 @@ userRouter.post("/request", verifyUser, async (req, res) => {
   }
 });
 
+
+userRouter.get("/requests/sent", verifyUser, async (req, res) => {
+  const userId = req.user!.userId;
+
+  try {
+    const requests = await prisma.swapRequest.findMany({
+      where: { fromUserId: userId },
+      include: {
+        toUser: {
+          select: { id: true, email: true, name: true }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    res.status(200).json({ requests });
+  } catch (err) {
+    console.error("Error fetching sent requests:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+userRouter.get("/requests/received", verifyUser, async (req, res) => {
+  const userId = req.user!.userId;
+
+  try {
+    const requests = await prisma.swapRequest.findMany({
+      where: { toUserId: userId },
+      include: {
+        fromUser: {
+          select: { id: true, email: true, name: true }
+        }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+
+    res.status(200).json({ requests });
+  } catch (err) {
+    console.error("Error fetching received requests:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+const updateStatusSchema = z.object({
+  status: z.enum(["accepted", "declined"])
+});
+
+
+userRouter.patch("/request/:id", verifyUser, async (req, res) => {
+  const requestId = Number(req.params.id);
+  const userId = req.user!.userId;
+
+  const result = updateStatusSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ message: "Invalid status. Must be 'accepted' or 'declined'." });
+  }
+
+  const { status } = result.data;
+
+  try {
+    const request = await prisma.swapRequest.findUnique({ where: { id: requestId } });
+
+    if (!request) {
+      return res.status(404).json({ message: "Swap request not found" });
+    }
+
+    if (request.toUserId !== userId) {
+      return res.status(403).json({ message: "You are not authorized to update this request" });
+    }
+
+    if (request.status !== "pending") {
+      return res.status(400).json({ message: "Request already responded to" });
+    }
+
+    const updatedRequest = await prisma.swapRequest.update({
+      where: { id: requestId },
+      data: { status },
+    });
+
+    res.status(200).json({ message: `Request ${status}`, updatedRequest });
+  } catch (err) {
+    console.error("Error updating request status:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 export default userRouter;

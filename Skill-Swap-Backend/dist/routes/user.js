@@ -186,4 +186,75 @@ userRouter.post("/request", auth_1.verifyUser, (req, res) => __awaiter(void 0, v
         res.status(500).json({ message: "Server error" });
     }
 }));
+userRouter.get("/requests/sent", auth_1.verifyUser, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user.userId;
+    try {
+        const requests = yield prisma.swapRequest.findMany({
+            where: { fromUserId: userId },
+            include: {
+                toUser: {
+                    select: { id: true, email: true, name: true }
+                }
+            },
+            orderBy: { createdAt: "desc" }
+        });
+        res.status(200).json({ requests });
+    }
+    catch (err) {
+        console.error("Error fetching sent requests:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+}));
+userRouter.get("/requests/received", auth_1.verifyUser, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user.userId;
+    try {
+        const requests = yield prisma.swapRequest.findMany({
+            where: { toUserId: userId },
+            include: {
+                fromUser: {
+                    select: { id: true, email: true, name: true }
+                }
+            },
+            orderBy: { createdAt: "desc" }
+        });
+        res.status(200).json({ requests });
+    }
+    catch (err) {
+        console.error("Error fetching received requests:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+}));
+const updateStatusSchema = zod_1.z.object({
+    status: zod_1.z.enum(["accepted", "declined"])
+});
+userRouter.patch("/request/:id", auth_1.verifyUser, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const requestId = Number(req.params.id);
+    const userId = req.user.userId;
+    const result = updateStatusSchema.safeParse(req.body);
+    if (!result.success) {
+        return res.status(400).json({ message: "Invalid status. Must be 'accepted' or 'declined'." });
+    }
+    const { status } = result.data;
+    try {
+        const request = yield prisma.swapRequest.findUnique({ where: { id: requestId } });
+        if (!request) {
+            return res.status(404).json({ message: "Swap request not found" });
+        }
+        if (request.toUserId !== userId) {
+            return res.status(403).json({ message: "You are not authorized to update this request" });
+        }
+        if (request.status !== "pending") {
+            return res.status(400).json({ message: "Request already responded to" });
+        }
+        const updatedRequest = yield prisma.swapRequest.update({
+            where: { id: requestId },
+            data: { status },
+        });
+        res.status(200).json({ message: `Request ${status}`, updatedRequest });
+    }
+    catch (err) {
+        console.error("Error updating request status:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+}));
 exports.default = userRouter;
