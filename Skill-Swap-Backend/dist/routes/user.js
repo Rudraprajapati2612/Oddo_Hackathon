@@ -17,6 +17,7 @@ const zod_1 = require("zod");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const client_1 = require("@prisma/client");
+const auth_1 = require("../middleware/auth");
 const userRouter = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
 // --------------------- Zod Schemas ---------------------
@@ -95,6 +96,94 @@ userRouter.post("/login", (req, res) => __awaiter(void 0, void 0, void 0, functi
     catch (error) {
         console.error("Login error:", error);
         return res.status(500).json({ error: "Internal server error" });
+    }
+}));
+const profileSchema = zod_1.z.object({
+    bio: zod_1.z.string().optional(),
+    skills: zod_1.z.array(zod_1.z.string()).min(1, "At least one skill is required"),
+    location: zod_1.z.string().optional(),
+});
+userRouter.post("/profile", auth_1.verifyUser, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = profileSchema.safeParse(req.body);
+    if (!result.success) {
+        return res.status(400).json({
+            message: "Validation failed",
+            // errors: result.error.errors,
+        });
+    }
+    const { bio, skills, location } = result.data;
+    const userId = req.user.userId;
+    try {
+        const existing = yield prisma.profile.findUnique({ where: { userId } });
+        if (existing) {
+            return res.status(409).json({ message: "Profile already exists" });
+        }
+        const profile = yield prisma.profile.create({
+            data: {
+                bio,
+                skills,
+                location,
+                userId,
+            },
+        });
+        res.status(201).json({ message: "Profile created", profile });
+    }
+    catch (err) {
+        console.error("Create profile error:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+}));
+userRouter.get("/profile/me", auth_1.verifyUser, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user.userId;
+    try {
+        const profile = yield prisma.profile.findUnique({ where: { userId } });
+        if (!profile) {
+            return res.status(404).json({ message: "Profile not found" });
+        }
+        res.status(200).json({ profile });
+    }
+    catch (err) {
+        console.error("Fetch profile error:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+}));
+const requestSchema = zod_1.z.object({
+    toUserId: zod_1.z.number(),
+    skillNeeded: zod_1.z.string().min(1),
+    skillOffered: zod_1.z.string().min(1),
+    schedule: zod_1.z.string().optional(),
+});
+userRouter.post("/request", auth_1.verifyUser, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = requestSchema.safeParse(req.body);
+    if (!result.success) {
+        return res.status(400).json({ message: "Validation failed" });
+    }
+    const { toUserId, skillNeeded, skillOffered, schedule } = result.data;
+    const fromUserId = req.user.userId;
+    try {
+        if (toUserId === fromUserId) {
+            return res.status(400).json({ message: "You can't request yourself." });
+        }
+        const toUserExists = yield prisma.user.findUnique({
+            where: { id: toUserId },
+        });
+        if (!toUserExists) {
+            return res.status(404).json({ message: "Target user not found" });
+        }
+        const request = yield prisma.swapRequest.create({
+            data: {
+                fromUserId,
+                toUserId,
+                skillNeeded,
+                skillOffered,
+                schedule,
+            },
+        });
+        res.status(201).json({ message: "Swap request sent", request });
+    }
+    catch (err) {
+        console.error("Swap request error:", err);
+        res.status(500).json({ message: "Server error" });
     }
 }));
 exports.default = userRouter;

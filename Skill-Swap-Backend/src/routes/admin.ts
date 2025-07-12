@@ -3,7 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
-
+import { verifyAdmin } from "../middleware/auth";
 const adminRouter = Router();
 const prisma = new PrismaClient(); 
 
@@ -108,5 +108,7 @@ adminRouter.post("/login", async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
 
 export default adminRouter;
